@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 844">
+  <rect width="390" height="844" fill="#EAE4D8"/>
+  <rect width="390" height="56" fill="#FFFFFF"/>
+  <text x="16" y="34" font-family="Georgia, serif" font-size="18" font-style="italic" font-weight="bold" fill="#14100E">Flotaya</text>
+  <text x="16" y="80" font-family="Arial, sans-serif" font-size="9" fill="#C9A227" letter-spacing="2">MONITOREO EN TIEMPO REAL</text>
+  <rect x="16" y="96" width="172" height="110" rx="16" fill="#FFFFFF"/>
+  <text x="30" y="118" font-family="Arial, sans-serif" font-size="9" fill="#C9A227" letter-spacing="2">PH</text>
+  <text x="30" y="158" font-family="Georgia, serif" font-size="40" font-style="italic" fill="#14100E">7.4</text>
+  <rect x="202" y="96" width="172" height="110" rx="16" fill="#FFFFFF"/>
+  <text x="216" y="118" font-family="Arial, sans-serif" font-size="9" fill="#C9A227" letter-spacing="2">TURBIDEZ</text>
+  <text x="216" y="158" font-family="Georgia, serif" font-size="40" font-style="italic" fill="#14100E">2.8</text>
+  <rect x="16" y="218" width="172" height="110" rx="16" fill="#FFFFFF"/>
+  <text x="30" y="240" font-family="Arial, sans-serif" font-size="9" fill="#C9A227" letter-spacing="2">TEMPERATURA</text>
+  <text x="30" y="280" font-family="Georgia, serif" font-size="40" font-style="italic" fill="#14100E">24.8</text>
+  <rect x="202" y="218" width="172" height="110" rx="16" fill="#FFFFFF"/>
+  <text x="216" y="240" font-family="Arial, sans-serif" font-size="9" fill="#C9A227" letter-spacing="2">CONDUCTIVIDAD</text>
+  <text x="216" y="280" font-family="Georgia, serif" font-size="40" font-style="italic" fill="#14100E">412</text>
+  <rect x="16" y="348" width="358" height="180" rx="16" fill="#FFFFFF"/>
+  <text x="32" y="374" font-family="Arial, sans-serif" font-size="9" fill="#C9A227" letter-spacing="2">INTELIGENCIA ARTIFICIAL</text>
+  <text x="32" y="400" font-family="Georgia, serif" font-size="22" font-style="italic" fill="#14100E">Diagnóstico ML</text>
+  <rect x="32" y="420" width="150" height="70" rx="12" fill="#4A7C5910"/>
+  <rect x="196" y="420" width="150" height="70" rx="12" fill="#C9A22710"/>
+</svg>

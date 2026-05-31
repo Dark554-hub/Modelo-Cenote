@@ -31,3 +31,13 @@ Thumbs.db
 
 # ─── ZIP ─────────────────────────────────────────────────────
 *.zip
+
+# ─── Next.js / Node / Vercel ─────────────────────────────────
+.next/
+out/
+build/
+node_modules/
+.vercel/
+.env*.local
+*.log
+

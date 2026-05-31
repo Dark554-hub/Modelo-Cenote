@@ -1,0 +1,57 @@
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700;800;900&display=swap');
+@import "tailwindcss";
+
+/* =============================================
+   LYMPHA — Design System Tokens
+   Tech-Organic · Cenote Water Intelligence
+   ============================================= */
+:root {
+  /* Core Palette */
+  --lympha-walnut:    #14100E;  /* Deep Walnut Brown — nav, buttons */
+  --lympha-amber:     #C9A227;  /* Gold Amber — primary accent, eyebrows */
+  --lympha-sand:      #EAE4D8;  /* Linen — main background */
+  --lympha-cream:     #FFFFFF;  /* White — cards, panels */
+  --lympha-slate:     #0F172A;  /* Slate Black — body text, titles */
+  --lympha-iot:       #0EA5E9;  /* Sky Blue IoT — sync indicators */
+
+  /* Semáforo Térreo */
+  --lympha-green:     #4A7C59;  /* Moss Green — good status */
+  --lympha-mustard:   #C9A227;  /* Mustard — warning */
+  --lympha-terracota: #A34A3E;  /* Brick Terracota — alert */
+
+  /* Typography */
+  --font-serif: 'Instrument Serif', Georgia, serif;
+  --font-sans:  'Inter', system-ui, sans-serif;
+
+  /* Layout */
+  --background: var(--lympha-sand);
+  --foreground: var(--lympha-slate);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  background-color: var(--lympha-sand);
+  color: var(--lympha-slate);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Utility: Instrument Serif en cursiva para títulos premium */
+.serif-italic {
+  font-family: var(--font-serif);
+  font-style: italic;
+}
+
+/* ---- Scrollbar sutil ---- */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--lympha-sand); }
+::-webkit-scrollbar-thumb { background: #C9A22760; border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: var(--lympha-amber); }
