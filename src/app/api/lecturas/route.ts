@@ -14,27 +14,31 @@ function headers() {
 
 // GET /api/lecturas
 export async function GET() {
-  const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/FLOTAYA?select=created_at,ph,turbidez_ntu,temperatura_c,conductividad_us,humedad_pct&order=created_at.desc&limit=100`,
-    { headers: headers() }
-  );
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/FLOTAYA?select=created_at,ph,turbidez_ntu,temperatura_c,conductividad_us,humedad_pct&order=created_at.desc&limit=100`,
+      { headers: headers() }
+    );
 
-  if (!res.ok) {
-    const err = await res.json();
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    if (!res.ok) {
+      const text = await res.text();
+      return NextResponse.json({ success: false, error: `Supabase error status ${res.status}: ${text}` }, { status: 500 });
+    }
+
+    const data = await res.json();
+    const formattedData = data.reverse().map((record: any) => ({
+      timestamp: record.created_at,
+      ph: record.ph,
+      turbidez: record.turbidez_ntu,
+      temperatura: record.temperatura_c,
+      conductividad: record.conductividad_us,
+      humedad: record.humedad_pct,
+    }));
+
+    return NextResponse.json({ success: true, data: formattedData });
+  } catch (error: any) {
+    return NextResponse.json({ success: false, error: error.message || String(error) }, { status: 500 });
   }
-
-  const data = await res.json();
-  const formattedData = data.reverse().map((record: any) => ({
-    timestamp: record.created_at,
-    ph: record.ph,
-    turbidez: record.turbidez_ntu,
-    temperatura: record.temperatura_c,
-    conductividad: record.conductividad_us,
-    humedad: record.humedad_pct,
-  }));
-
-  return NextResponse.json({ success: true, data: formattedData });
 }
 
 // POST /api/lecturas
