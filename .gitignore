@@ -1,0 +1,33 @@
+# ─── Python ──────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.pyc
+
+# ─── Modelo entrenado (se regenera en cada deploy) ───────────
+models/water_quality_model.pkl
+models/scaler.pkl
+models/confusion_matrix.png
+
+# ─── Datos generados ─────────────────────────────────────────
+data/historical_data.csv
+
+# ─── Entornos virtuales ───────────────────────────────────────
+venv/
+.venv/
+env/
+ENV/
+
+# ─── IDEs ────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+
+# ─── Sistema ─────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ─── ZIP ─────────────────────────────────────────────────────
+*.zip
