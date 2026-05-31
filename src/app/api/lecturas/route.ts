@@ -60,6 +60,7 @@ export async function POST(request: Request) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       },
       body: JSON.stringify(body),
     });
@@ -80,8 +81,13 @@ export async function POST(request: Request) {
       { status: 201 }
     );
   } catch (error: any) {
+    console.error("Error in POST /api/lecturas:", error);
+    if (error.cause) {
+      console.error("Underlying cause:", error.cause);
+    }
+    const detail = error.cause ? `${error.message} (Cause: ${error.cause.message || String(error.cause)})` : error.message;
     return NextResponse.json(
-      { success: false, error: error.message || 'Payload inválido' },
+      { success: false, error: detail || 'Payload inválido' },
       { status: 400 }
     );
   }
