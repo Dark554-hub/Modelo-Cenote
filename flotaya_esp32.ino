@@ -36,7 +36,7 @@ const char* WIFI_PASSWORD = "TU_PASSWORD_WIFI";
 //   const char* API_URL = "http://192.168.1.X:8000/nueva-lectura";
 // En producción (servidor con IP pública):
 //   const char* API_URL = "http://TU_SERVIDOR_IP:8000/nueva-lectura";
-const char* API_URL = "http://TU_IP_O_DOMINIO:8000/nueva-lectura";
+const char* API_URL = "https://modelo-cenote.onrender.com/nueva-lectura";
 
 // ─── Intervalo de envío ──────────────────────────────────────
 const unsigned long INTERVALO_MS = 60000;  // cada 60 segundos
