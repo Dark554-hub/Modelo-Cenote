@@ -234,65 +234,6 @@ function clasificarLectura(input: DiagnosticoInput): DiagnosticoResult {
   };
 }
 
-async function getGeminiRecommendations(
-  ph: number,
-  turbidez: number,
-  temperatura: number,
-  clasificacion: string,
-  conductividad?: number
-): Promise<string[] | null> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    console.log("No GEMINI_API_KEY env var found, falling back to static rules.");
-    return null;
-  }
-
-  const prompt = `Eres un asistente experto en ecología de cenotes y calidad de agua. Analiza los siguientes parámetros de un cenote en Yucatán:
-- pH: ${ph.toFixed(2)} (Rango óptimo: 6.5 a 8.0)
-- Turbidez: ${turbidez.toFixed(2)} NTU (Óptimo: <= 4 NTU)
-- Temperatura: ${temperatura.toFixed(1)} °C (Óptimo: <= 26.5 °C)
-${conductividad !== undefined ? `- Conductividad: ${conductividad.toFixed(1)} µS/cm (Óptimo: 200 a 600 µS/cm)` : ''}
-Clasificación de riesgo actual: ${clasificacion.toUpperCase()}
-
-Genera de 2 a 3 recomendaciones cortas, directas y accionables en español para los cuidadores del cenote. 
-No agregues explicaciones externas, saludos, ni formato markdown. Devuelve ÚNICAMENTE un array JSON válido de strings con esta estructura exacta:
-["recomendacion 1", "recomendacion 2", "recomendacion 3"]`;
-
-  try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            responseMimeType: "application/json"
-          }
-        }),
-      }
-    );
-
-    if (!res.ok) {
-      console.warn(`Gemini API error: ${res.status}`);
-      return null;
-    }
-
-    const data = await res.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!text) return null;
-
-    const parsed = JSON.parse(text.trim());
-    if (Array.isArray(parsed) && parsed.every(x => typeof x === 'string')) {
-      return parsed;
-    }
-    return null;
-  } catch (err) {
-    console.error("Error fetching Gemini recommendations:", err);
-    return null;
-  }
-}
-
 // POST /api/diagnostico — Recibe datos de sensor y retorna diagnóstico ML
 export async function POST(request: Request) {
   try {
@@ -327,19 +268,6 @@ export async function POST(request: Request) {
       temperatura,
       conductividad: typeof conductividad === 'number' ? conductividad : undefined,
     });
-
-    // Intentar obtener recomendaciones dinámicas por Gemini
-    const geminiRecs = await getGeminiRecommendations(
-      ph,
-      turbidez,
-      temperatura,
-      diagnostico.clasificacion,
-      typeof conductividad === 'number' ? conductividad : undefined
-    );
-
-    if (geminiRecs) {
-      diagnostico.recomendaciones = geminiRecs;
-    }
 
     return NextResponse.json({
       success: true,
