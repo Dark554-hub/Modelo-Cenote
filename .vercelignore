@@ -1,0 +1,8 @@
+# Exclude only root level Python backend and other non-frontend files from Vercel deployment
+/api/
+/models/
+/requirements.txt
+/.python-version
+/build.py
+/flotaya_esp32.ino
+/modelo_Cenote_limpio.zip
