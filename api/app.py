@@ -19,16 +19,14 @@ import urllib.request
 import json
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 # ─── Configuración ────────────────────────────────────────────────────────────
 BASE_DIR      = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODEL_PATH    = os.path.join(BASE_DIR, 'models', 'water_quality_model.pkl')
 SCALER_PATH   = os.path.join(BASE_DIR, 'models', 'scaler.pkl')
-DASHBOARD_DIR = os.path.join(BASE_DIR, 'dashboard')
 DATA_PATH     = os.path.join(BASE_DIR, 'data', 'historical_data.csv')
 
 SUPABASE_URL  = "https://lbhlinueuscwwivazeyn.supabase.co"
@@ -62,11 +60,10 @@ app.add_middleware(
     allow_origins=["*"], allow_credentials=True,
     allow_methods=["*"], allow_headers=["*"]
 )
-app.mount("/dashboard", StaticFiles(directory=DASHBOARD_DIR, html=True), name="dashboard")
 
 @app.get("/")
 def read_root():
-    return RedirectResponse(url="/dashboard/index.html")
+    return JSONResponse({"status": "ok", "api": "Cenote Monitor API", "docs": "/docs"})
 
 
 # ─── Modelos Pydantic ─────────────────────────────────────────────────────────
