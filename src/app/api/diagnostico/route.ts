@@ -185,7 +185,7 @@ function clasificarLectura(input: DiagnosticoInput): DiagnosticoResult {
 
   if (clasificacion === 'alerta') {
     recomendaciones.push(
-      '⚠️ Parámetros críticos detectados. Tomar muestras para laboratorio inmediatamente.'
+      'Parámetros críticos detectados. Tomar muestras para laboratorio inmediatamente.'
     );
     recomendaciones.push(
       'Notificar a las autoridades ambientales competentes.'
