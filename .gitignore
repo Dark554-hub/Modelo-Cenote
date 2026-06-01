@@ -44,4 +44,4 @@ tsconfig.tsbuildinfo
 
 # ─── Carpetas legacy / no necesarias en el repo ──────────────
 dashboard/
-data/
+data/historical_data.csv
