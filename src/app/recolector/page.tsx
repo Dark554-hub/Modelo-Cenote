@@ -5,7 +5,7 @@ import React, { useState, useEffect } from "react";
 import {
   Bluetooth, LayoutDashboard, RefreshCw, Database,
   Search, Wifi, WifiOff, CloudUpload, Activity,
-  AlertCircle, Droplets
+  AlertCircle, Droplets, ChevronRight
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -58,7 +58,7 @@ export default function MobileCollector() {
   const [syncError, setSyncError] = useState<string | null>(null);
   const [bleLogs, setBleLogs] = useState<BleLogItem[]>([]);
   const [bleFramesCount, setBleFramesCount] = useState(0);
-  const [bleLastRaw, setBleLastRaw] = useState<string>("—");
+  const [bleLastRaw, setBleLastRaw] = useState<string>("(sin datos)");
   const streamBufferRef = React.useRef("");
   const pollTimerRef = React.useRef<number | null>(null);
   const flushTimerRef = React.useRef<number | null>(null);
@@ -120,13 +120,13 @@ export default function MobileCollector() {
   const formatBLEError = (error: unknown) => {
     const msg = (error as Error)?.message?.toLowerCase() ?? "";
     if (msg.includes("not supported") || msg.includes("notfounderror")) {
-      return "El ESP32 se conecto, pero no expone el servicio/caracteristica BLE esperados. Verifica UUIDs del firmware o usa un perfil BLE UART (NUS/FFE0).";
+      return "El ESP32 se conectó, pero no expone el servicio/característica BLE esperado.";
     }
     if (msg.includes("notallowederror") || msg.includes("user cancelled")) {
-      return "Seleccion de dispositivo cancelada.";
+      return "Selección de dispositivo cancelada.";
     }
     if (msg.includes("connection attempt failed")) {
-      return "La boya fue detectada, pero el enlace BLE fallo al abrir GATT. Reinicia Bluetooth del PC y energiza de nuevo la ESP32; la app ahora reintenta automaticamente varias veces.";
+      return "La boya fue detectada, pero el enlace BLE falló al abrir GATT. Reinicia Bluetooth y energiza la ESP32.";
     }
     return (error as Error)?.message ?? "No se pudo conectar por BLE.";
   };
@@ -160,12 +160,12 @@ export default function MobileCollector() {
 
   const pushBleLog = (raw: string, status: "ok" | "invalid") => {
     const normalized = raw.trim();
-    setBleLastRaw(normalized || "—");
+    setBleLastRaw(normalized || "(vacío)");
     setBleFramesCount((prev) => prev + 1);
     setBleLogs((prev) => [
       {
         at: new Date().toLocaleTimeString(),
-        raw: normalized || "(trama vacia)",
+        raw: normalized || "(trama vacía)",
         status,
       },
       ...prev,
@@ -190,18 +190,16 @@ export default function MobileCollector() {
   };
 
   const findBestCharacteristic = async (server: any) => {
-    // 1) Probar explícitamente UUIDs de servicio conocidos (más confiable con permisos Web Bluetooth)
     for (const serviceUuid of BLE_FALLBACK_SERVICE_UUIDS) {
       try {
         const service = await server.getPrimaryService(serviceUuid);
         const picked = await pickCharacteristicFromService(service);
         if (picked) return picked;
       } catch {
-        // Continuar con el siguiente UUID conocido.
+        // Continuar
       }
     }
 
-    // 2) Intentar barrido de servicios disponibles
     const services = await server.getPrimaryServices();
     for (const service of services) {
       const chars = await service.getCharacteristics();
@@ -217,7 +215,7 @@ export default function MobileCollector() {
       const firstReadable = chars.find((c: any) => c.properties.read);
       if (firstReadable) return firstReadable;
     }
-    throw new Error("No se encontro ninguna caracteristica util (notify/indicate/read) en el dispositivo.");
+    throw new Error("No se encontró ninguna característica útil (notify/indicate/read) en el dispositivo.");
   };
 
   const findReadableCharacteristic = async (server: any) => {
@@ -229,7 +227,7 @@ export default function MobileCollector() {
         if (readable) return readable;
       }
     } catch {
-      // Ignorar y devolver null
+      // Ignorar
     }
     return null;
   };
@@ -277,13 +275,13 @@ export default function MobileCollector() {
                 const text = new TextDecoder("utf-8").decode(value).trim();
                 if (text) parseAndStore(text);
               } catch {
-                // Ignorar lecturas fallidas intermitentes durante polling BLE.
+                // Ignorar
               }
             }, 1500);
           } else {
             const readableFallback = await findReadableCharacteristic(server);
             if (!readableFallback) {
-              throw new Error("La caracteristica BLE seleccionada no permitio notificaciones y no existe una alternativa de lectura.");
+              throw new Error("La característica BLE seleccionada no permitió notificaciones.");
             }
             char = readableFallback;
             connectionMode = "polling";
@@ -293,7 +291,7 @@ export default function MobileCollector() {
                 const text = new TextDecoder("utf-8").decode(value).trim();
                 if (text) parseAndStore(text);
               } catch {
-                // Ignorar lecturas fallidas intermitentes durante polling BLE.
+                // Ignorar
               }
             }, 1500);
           }
@@ -306,11 +304,11 @@ export default function MobileCollector() {
             const text = new TextDecoder("utf-8").decode(value).trim();
             if (text) parseAndStore(text);
           } catch {
-            // Ignorar lecturas fallidas intermitentes durante polling BLE.
+            // Ignorar
           }
         }, 1500);
       } else {
-        throw new Error(`La caracteristica ${char.uuid} no soporta notify/indicate/read.`);
+        throw new Error(`La característica ${char.uuid} no soporta notify/indicate/read.`);
       }
 
       setDevice(dev);
@@ -334,7 +332,7 @@ export default function MobileCollector() {
 
   const handleBTData = (event: any) => {
     const chunk = new TextDecoder("utf-8").decode(event.target.value).replace(/\0/g, "");
-    setBleLastRaw(chunk.trim() || "—");
+    setBleLastRaw(chunk.trim() || "(vacío)");
     streamBufferRef.current += chunk;
 
     const frames = streamBufferRef.current.split(/\r?\n/);
@@ -351,7 +349,6 @@ export default function MobileCollector() {
       if (maybeFrame) parseAndStore(maybeFrame);
     }
 
-    // Algunos firmwares envian sin salto de linea; hacemos flush por inactividad.
     if (flushTimerRef.current !== null) {
       window.clearTimeout(flushTimerRef.current);
     }
@@ -381,7 +378,7 @@ export default function MobileCollector() {
         };
       }
     } catch {
-      // El frame no era JSON, intentamos CSV.
+      // Intentar CSV
     }
 
     const parts = raw.split(",").map((p) => parseFloat(p.trim()));
@@ -454,7 +451,7 @@ export default function MobileCollector() {
           syncedIds.push(item.id);
         } else {
           const err = await res.json().catch(() => ({}));
-          setSyncError(`Error ${res.status}: ${err.error ?? "fallo al subir"}`);
+          setSyncError(`Error ${res.status}: ${err.error ?? "Fallo al subir"}`);
           break;
         }
       } catch (e: any) {
@@ -480,40 +477,36 @@ export default function MobileCollector() {
     if (!d) return [];
     const list = [];
     if (d.ph > 8.0)
-      list.push({ color: "#A34A3E", bg: "#A34A3E12",
+      list.push({ color: "var(--lympha-red)", bg: "var(--lympha-red-bg)",
         title: `pH alcalino detectado (${d.ph})`,
         desc: "El pH supera el límite saludable (8.0). Causa probable: uso de cremas y bloqueadores solares por turistas. Recomendación: restringir acceso temporalmente y tomar muestras para laboratorio." });
     else if (d.ph >= 6.5)
-      list.push({ color: "#4A7C59", bg: "#4A7C5912",
+      list.push({ color: "var(--lympha-green)", bg: "var(--lympha-green-bg)",
         title: `pH en rango óptimo (${d.ph})`,
         desc: "El agua mantiene un índice neutro y purificado. Las condiciones son favorables para la fauna y flora endémica del cenote." });
     if (d.turbidez > 4)
-      list.push({ color: "#C9A227", bg: "#C9A22712",
+      list.push({ color: "var(--lympha-yellow)", bg: "var(--lympha-yellow-bg)",
         title: `Visibilidad reducida (${d.turbidez} NTU)`,
         desc: "El agua está turbia. Verificar deslaves, obras de construcción o actividad agrícola cercana que pueda estar filtrando sedimentos al manto freático." });
     if (d.temperatura > 26.5)
-      list.push({ color: "#d97706", bg: "#d9770612",
+      list.push({ color: "var(--lympha-yellow)", bg: "var(--lympha-yellow-bg)",
         title: `Temperatura elevada (${d.temperatura} °C)`,
         desc: "Temperatura sobre 26.5 °C favorece la proliferación de algas nocivas que asfixian a la fauna nativa del cenote. Monitorear en las próximas 24 h." });
     return list;
   };
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "var(--lympha-sand)" }}>
+    <div className="min-h-screen bg-[var(--lympha-bg)]">
 
       {/* ── HEADER ── */}
-      <header
-        style={{ backgroundColor: "#FFFFFF", borderBottom: "1px solid #C9A22718" }}
-        className="px-4 md:px-10 py-3 md:py-4 flex items-center justify-between sticky top-0 z-10 shadow-sm"
-      >
-        {/* Logo + back */}
+      <header className="px-4 md:px-10 py-3.5 flex items-center justify-between sticky top-0 z-10 border-b border-slate-200 bg-white">
         <div className="flex items-center gap-4">
           <Link
             href="/"
-            className="p-2 rounded-full transition-opacity hover:opacity-70 flex-shrink-0 border"
-            style={{ backgroundColor: "#F5F3EF", borderColor: "#C9A22722" }}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 text-xs font-bold transition-all active:scale-97"
           >
-            <LayoutDashboard className="w-4 h-4" style={{ color: "var(--lympha-walnut)" }} />
+            <LayoutDashboard className="w-3.5 h-3.5" />
+            <span>Panel de control</span>
           </Link>
           <div className="h-8 w-auto flex items-center">
             <Image
@@ -525,125 +518,107 @@ export default function MobileCollector() {
               onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
             />
           </div>
-          <div className="hidden sm:flex items-center pl-4 border-l" style={{ borderColor: "#C9A22728" }}>
+          <div className="hidden sm:flex items-center pl-4 border-l border-slate-200">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--lympha-amber)" }}>
-                RECOLECTOR DE CAMPO
+              <p className="text-xs font-bold uppercase tracking-wider text-[var(--lympha-accent)]">
+                Recolector de campo
               </p>
-              <p className="text-xs font-medium mt-0.5" style={{ color: "#0F172A55" }}>
-                {isOnline ? "Panel de recomendaciones activo" : "Modo sin conexión — datos locales"}
+              <p className="text-[10px] font-semibold text-slate-400 mt-0.5 uppercase tracking-wider">
+                {isOnline ? "Panel activo" : "Modo local offline"}
               </p>
             </div>
           </div>
         </div>
 
-        {/* Network badge */}
+        {/* Network status */}
         <div
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border"
-          style={{
-            backgroundColor: isOnline ? "#4A7C5910" : "#C9A22710",
-            borderColor:     isOnline ? "#4A7C5935" : "#C9A22735",
-            color:           isOnline ? "#4A7C59"   : "#C9A227",
-          }}
+          className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold border uppercase tracking-wider ${
+            isOnline ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-amber-50 border-amber-200 text-amber-800"
+          }`}
         >
           {isOnline ? <Wifi className="w-3.5 h-3.5" /> : <WifiOff className="w-3.5 h-3.5" />}
-          <span className="hidden sm:inline">{isOnline ? "ONLINE" : "SIN RED"}</span>
+          <span className="hidden sm:inline">{isOnline ? "En línea" : "Desconectado"}</span>
         </div>
       </header>
 
       {/* ── BODY ── */}
-      <div className="p-3 md:p-8 grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6">
+      <div className="max-w-7xl mx-auto p-4 md:p-8 grid grid-cols-1 lg:grid-cols-12 gap-6">
 
         {/* ── LEFT PANEL ── */}
-        <div className="lg:col-span-4 space-y-4 order-2 lg:order-1">
+        <div className="lg:col-span-4 space-y-6 order-2 lg:order-1">
 
           {/* Bluetooth connect */}
-          <div
-            className="rounded-3xl p-6 border"
-            style={{ backgroundColor: "var(--lympha-cream)", borderColor: "#C9A22722" }}
-          >
-            <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: "var(--lympha-amber)" }}>
-              VÍNCULO DE CAMPO
+          <div className="rounded-md p-6 border border-slate-200 bg-white">
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
+              Vínculo de campo
             </p>
-            <h2 className="font-bold mb-1 flex items-center gap-2 serif-italic text-xl" style={{ color: "var(--lympha-walnut)" }}>
-              <Bluetooth style={{ color: "var(--lympha-amber)" }} className="w-5 h-5" />
+            <h2 className="text-lg font-bold text-slate-800 mb-1 flex items-center gap-2">
+              <Bluetooth className="w-5 h-5 text-[var(--lympha-accent)]" />
               Conectar boya
             </h2>
-            <p className="text-xs mb-5 font-medium" style={{ color: "#0F172A55" }}>
-              Enlace BLE · recibe tramas JSON o CSV
+            <p className="text-xs text-slate-500 mb-5">
+              Enlace BLE · Recibe tramas de sensores.
             </p>
 
             <div className="space-y-3">
               <button
                 onClick={connectBluetooth}
                 disabled={isConnecting || !isWebBluetoothSupported}
-                className="w-full py-3.5 rounded-full font-semibold text-sm transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
-                style={{ backgroundColor: "var(--lympha-walnut)", color: "#FFFFFF" }}
+                className="w-full py-2.5 rounded-md font-bold text-xs transition-all active:scale-97 disabled:opacity-50 flex items-center justify-center gap-2 bg-slate-900 text-white hover:bg-slate-800"
               >
-                {isConnecting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-                {isConnecting ? "Buscando BLE..." : "Conectar boya"}
+                {isConnecting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
+                {isConnecting ? "Buscando..." : "Conectar boya"}
               </button>
 
               <button
                 onClick={simulateData}
-                className="w-full py-3 rounded-full font-medium text-sm transition-all active:scale-95 border flex items-center justify-center gap-2"
-                style={{ backgroundColor: "transparent", borderColor: "#C9A22735", color: "var(--lympha-amber)" }}
+                className="w-full py-2 rounded-md font-bold text-xs transition-all active:scale-97 border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 flex items-center justify-center gap-2"
               >
-                Simular dato (prueba)
+                Simular lectura local
               </button>
             </div>
 
             {device && (
-              <div
-                className="mt-4 p-3 rounded-2xl flex items-center gap-3 border"
-                style={{ backgroundColor: "#4A7C5910", borderColor: "#4A7C5930" }}
-              >
-                <Bluetooth className="w-4 h-4 flex-shrink-0" style={{ color: "#4A7C59" }} />
+              <div className="mt-4 p-3 rounded-md flex items-center gap-3 border border-emerald-200 bg-emerald-50/50">
+                <Bluetooth className="w-4 h-4 text-emerald-700 flex-shrink-0" />
                 <div>
-                  <p className="text-sm font-semibold" style={{ color: "var(--lympha-walnut)" }}>{device.name || "ESP32 Boya"}</p>
-                  <p className="text-xs font-medium" style={{ color: "#4A7C59" }}>Conectado · BLE</p>
+                  <p className="text-xs font-bold text-slate-800">{device.name || "ESP32 Boya"}</p>
+                  <p className="text-[10px] font-semibold text-emerald-700 uppercase tracking-wider">Conectado · BLE</p>
                 </div>
               </div>
             )}
           </div>
 
           {/* BLE logger */}
-          <div
-            className="rounded-3xl p-5 border"
-            style={{ backgroundColor: "var(--lympha-cream)", borderColor: "#0EA5E928" }}
-          >
+          <div className="rounded-md p-5 border border-slate-200 bg-white">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-semibold text-sm" style={{ color: "var(--lympha-walnut)" }}>
-                Logger BLE
+              <h3 className="font-bold text-xs uppercase tracking-wider text-slate-500">
+                Logs Telemetría
               </h3>
-              <span className="text-xs font-semibold px-2 py-1 rounded-full"
-                style={{ backgroundColor: "#0EA5E910", color: "#0EA5E9" }}>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 font-mono">
                 {bleFramesCount} tramas
               </span>
             </div>
 
-            <p className="text-xs mb-2" style={{ color: "#0F172A70" }}>
-              Última trama cruda: <span className="font-semibold">{bleLastRaw}</span>
+            <p className="text-xs mb-3 text-slate-600">
+              Último dato crudo: <span className="font-mono bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100 font-semibold">{bleLastRaw}</span>
             </p>
 
-            <div
-              className="max-h-44 overflow-auto rounded-xl border p-2 space-y-2"
-              style={{ borderColor: "#0EA5E925", backgroundColor: "#0EA5E907" }}
-            >
+            <div className="max-h-44 overflow-auto rounded border border-slate-150 p-2 space-y-1.5 bg-slate-50">
               {bleLogs.length === 0 ? (
-                <p className="text-xs text-center py-4" style={{ color: "#0F172A55" }}>
-                  Sin tramas BLE recibidas todavia.
+                <p className="text-xs text-center text-slate-400 py-6">
+                  Sin telemetría BLE activa
                 </p>
               ) : (
                 bleLogs.map((entry, i) => (
-                  <div key={`${entry.at}-${i}`} className="text-xs rounded-lg px-2 py-1.5 border"
+                  <div key={`${entry.at}-${i}`} className="text-[10px] rounded p-1.5 border font-mono leading-relaxed"
                     style={{
-                      borderColor: entry.status === "ok" ? "#4A7C5930" : "#A34A3E35",
-                      backgroundColor: entry.status === "ok" ? "#4A7C5910" : "#A34A3E10",
-                      color: "#0F172A",
+                      borderColor: entry.status === "ok" ? "#16653420" : "#991b1b20",
+                      backgroundColor: entry.status === "ok" ? "var(--lympha-green-bg)" : "var(--lympha-red-bg)",
+                      color: entry.status === "ok" ? "var(--lympha-green)" : "var(--lympha-red)",
                     }}
                   >
-                    <span className="font-semibold">[{entry.at}] {entry.status === "ok" ? "OK" : "INVALID"}</span>
+                    <span className="font-bold">[{entry.at}]</span>
                     <span> {entry.raw}</span>
                   </div>
                 ))
@@ -652,35 +627,27 @@ export default function MobileCollector() {
           </div>
 
           {/* Cache / sync panel */}
-          <div
-            className="rounded-3xl p-5 border"
-            style={{ backgroundColor: "var(--lympha-cream)", borderColor: "#C9A22722" }}
-          >
+          <div className="rounded-md p-5 border border-slate-200 bg-white">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="font-semibold flex items-center gap-2 text-sm"
-                style={{ color: "var(--lympha-walnut)" }}>
-                <Database className="w-4 h-4" style={{ color: "var(--lympha-amber)" }} />
-                Almacenamiento local
+              <h3 className="font-bold text-xs uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                <Database className="w-4 h-4 text-slate-400" />
+                Caché Local
               </h3>
-              <span
-                className="text-xs font-bold px-2.5 py-1 rounded-full"
-                style={{ backgroundColor: "#C9A22715", color: "var(--lympha-amber)" }}
-              >
-                {pendingSync.length} registros
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-mono">
+                {pendingSync.length} lecturas
               </span>
             </div>
 
             {lastSyncTime && (
-              <p className="text-xs font-medium mb-3 px-3 py-2 rounded-lg"
-                style={{ backgroundColor: "#4A7C5912", color: "#4A7C59" }}>
-                Última sincronización: {lastSyncTime}
+              <p className="text-xs font-semibold mb-3 px-3 py-1.5 rounded bg-emerald-50 text-emerald-700">
+                Sincronizado a las: {lastSyncTime}
               </p>
             )}
 
             {pendingSync.length > 0 ? (
               <div className="space-y-2">
                 {syncError && (
-                  <p className="text-xs font-medium px-3 py-2 rounded-lg" style={{ backgroundColor: "#A34A3E12", color: "#A34A3E" }}>
+                  <p className="text-xs font-semibold px-3 py-1.5 rounded bg-red-50 text-red-700">
                     {syncError}
                   </p>
                 )}
@@ -688,27 +655,22 @@ export default function MobileCollector() {
                   <button
                     onClick={syncAll}
                     disabled={isSyncing}
-                    className="w-full flex items-center justify-center gap-2 text-sm font-semibold py-3 rounded-full text-white transition active:scale-95"
-                    style={{ backgroundColor: "var(--lympha-walnut)" }}
+                    className="w-full flex items-center justify-center gap-2 text-xs font-bold py-2.5 rounded-md text-white transition active:scale-97 bg-slate-900 hover:bg-slate-800"
                   >
-                    {isSyncing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CloudUpload className="w-4 h-4" />}
-                    {isSyncing ? "Sincronizando..." : "Subir a la nube"}
+                    {isSyncing ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <CloudUpload className="w-3.5 h-3.5" />}
+                    {isSyncing ? "Subiendo..." : "Subir a la nube"}
                   </button>
                 )}
                 <button
                   onClick={clearCache}
-                  className="w-full text-xs font-semibold py-2 rounded-xl transition"
-                  style={{ color: "var(--lympha-terracota)", backgroundColor: "#A34A3E0D" }}
+                  className="w-full text-xs font-bold py-2 rounded-md transition text-red-700 bg-red-50 hover:bg-red-100"
                 >
                   Purgar caché local
                 </button>
               </div>
             ) : (
-              <p
-                className="text-xs font-medium text-center py-4 rounded-xl border border-dashed"
-                style={{ borderColor: "#C9A22730", color: "#0F172A50" }}
-              >
-                Todo está sincronizado
+              <p className="text-xs text-center py-4 border border-dashed border-slate-200 text-slate-400 rounded">
+                Base de datos local limpia
               </p>
             )}
           </div>
@@ -719,18 +681,15 @@ export default function MobileCollector() {
 
           {/* OFFLINE: last local reading */}
           {!isOnline && (
-            <div
-              className="rounded-3xl p-6 md:p-8 border h-full"
-              style={{ backgroundColor: "var(--lympha-cream)", borderColor: "#C9A22722" }}
-            >
-              <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: "var(--lympha-amber)" }}>
-                SIN CONEXIÓN
+            <div className="rounded-md p-6 md:p-8 border border-slate-200 bg-white h-full">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
+                Sin conexión
               </p>
-              <h2 className="text-2xl font-bold serif-italic mb-1" style={{ color: "var(--lympha-walnut)" }}>
+              <h2 className="text-xl font-bold text-slate-800 mb-1">
                 Última extracción de campo
               </h2>
-              <p className="text-sm font-medium mb-8" style={{ color: "#0F172A60" }}>
-                Datos almacenados localmente. Conéctate a internet para el análisis inteligente.
+              <p className="text-xs text-slate-500 mb-8">
+                Visualizando datos guardados localmente. Requiere red para análisis NOM predictivo.
               </p>
 
               {lastRead ? (
@@ -742,25 +701,20 @@ export default function MobileCollector() {
                   ].map(({ k, v }) => (
                     <div
                       key={k}
-                      className="rounded-3xl p-6 text-center border"
-                      style={{ backgroundColor: "var(--lympha-walnut)", borderColor: "#C9A22720" }}
+                      className="rounded-md p-6 text-center border border-slate-200 bg-slate-50"
                     >
-                      <p className="text-xs font-semibold uppercase tracking-wider mb-2"
-                        style={{ color: "#C9A22780" }}>{k}</p>
-                      <p className="text-5xl font-bold serif-italic" style={{ color: "var(--lympha-amber)" }}>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">{k}</p>
+                      <p className="text-4xl font-extrabold text-slate-800 font-mono">
                         {v.toFixed(1)}
                       </p>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div
-                  className="flex flex-col items-center justify-center h-48 rounded-2xl border-2 border-dashed"
-                  style={{ borderColor: "#C9A22730" }}
-                >
-                  <Activity className="w-10 h-10 mb-3" style={{ color: "#C9A22740" }} />
-                  <p className="text-sm font-medium" style={{ color: "#0F172A50" }}>
-                    Sin lecturas descargadas hoy
+                <div className="flex flex-col items-center justify-center h-48 border border-dashed border-slate-200 rounded">
+                  <Activity className="w-8 h-8 mb-3 text-slate-300" />
+                  <p className="text-xs text-slate-400">
+                    Sin lecturas locales hoy
                   </p>
                 </div>
               )}
@@ -769,32 +723,26 @@ export default function MobileCollector() {
 
           {/* ONLINE: smart recommendations */}
           {isOnline && (
-            <div
-              className="rounded-3xl p-6 md:p-8 border h-full"
-              style={{ backgroundColor: "var(--lympha-cream)", borderColor: "#C9A22722" }}
-            >
-              <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: "var(--lympha-amber)" }}>
-                ANÁLISIS EN TIEMPO REAL
+            <div className="rounded-md p-6 md:p-8 border border-slate-200 bg-white h-full">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
+                Análisis en tiempo real
               </p>
-              <h2 className="text-2xl font-bold serif-italic mb-1" style={{ color: "var(--lympha-walnut)" }}>
+              <h2 className="text-xl font-bold text-slate-800 mb-1">
                 Diagnóstico del cenote
               </h2>
-              <p className="text-sm font-medium mb-6" style={{ color: "#0F172A60" }}>
-                Análisis automático basado en la última lectura registrada
+              <p className="text-xs text-slate-500 mb-6">
+                Evaluación automatizada sobre la última lectura de los sensores.
               </p>
 
               {!lastRead ? (
-                <div
-                  className="p-5 rounded-2xl border flex items-start gap-3"
-                  style={{ backgroundColor: "#0EA5E910", borderColor: "#0EA5E925" }}
-                >
-                  <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: "var(--lympha-iot)" }} />
+                <div className="p-5 rounded-md border border-blue-200 bg-blue-50/50 flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-blue-700 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-semibold text-sm" style={{ color: "var(--lympha-slate)" }}>
-                      En espera de datos
+                    <p className="font-bold text-xs text-slate-800">
+                      Esperando telemetría
                     </p>
-                    <p className="text-sm mt-1" style={{ color: "#0F172A70" }}>
-                      Conecta la boya o usa "Simular dato" para activar el diagnóstico.
+                    <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                      Conecta la boya por Bluetooth o simula lecturas locales para activar el panel.
                     </p>
                   </div>
                 </div>
@@ -803,27 +751,27 @@ export default function MobileCollector() {
                   {recommendations(lastRead).map((rec, i) => (
                     <div
                       key={i}
-                      className="p-4 md:p-5 rounded-3xl border"
-                      style={{ backgroundColor: rec.bg, borderColor: `${rec.color}28` }}
+                      className="p-4 md:p-5 rounded-md border"
+                      style={{ backgroundColor: rec.bg, borderColor: `${rec.color}15` }}
                     >
-                      <div>
-                        <p className="font-semibold text-sm mb-1" style={{ color: rec.color }}>
-                          {rec.title}
-                        </p>
-                        <p className="text-sm leading-relaxed" style={{ color: "#0F172A80" }}>
-                          {rec.desc}
-                        </p>
+                      <div className="flex items-start gap-3">
+                        <ChevronRight className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: rec.color }} />
+                        <div>
+                          <p className="font-bold text-xs" style={{ color: rec.color }}>
+                            {rec.title}
+                          </p>
+                          <p className="text-xs leading-relaxed text-slate-600 mt-1">
+                            {rec.desc}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   ))}
                   {recommendations(lastRead).length === 0 && (
-                    <div
-                      className="p-5 rounded-2xl border flex items-start gap-3"
-                      style={{ backgroundColor: "#4A7C5912", borderColor: "#4A7C5928" }}
-                    >
-                      <Droplets className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: "#4A7C59" }} />
-                      <p className="text-sm font-medium" style={{ color: "#4A7C59" }}>
-                        Todos los parámetros son normales. El cenote está en buen estado.
+                    <div className="p-5 rounded-md border border-emerald-250 bg-emerald-50/50 flex items-start gap-3">
+                      <Droplets className="w-5 h-5 text-emerald-700 flex-shrink-0 mt-0.5" />
+                      <p className="text-xs font-semibold text-emerald-800">
+                        Todos los parámetros evaluados se encuentran dentro de las normativas vigentes.
                       </p>
                     </div>
                   )}
@@ -836,9 +784,9 @@ export default function MobileCollector() {
       </div>
 
       {/* ── FOOTER ── */}
-      <footer className="px-4 py-4 mt-2 text-center border-t" style={{ borderColor: "#C9A22718", backgroundColor: "#FFFFFF" }}>
-        <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#0F172A35" }}>
-          Flotaya · Soberanía Hídrica · Modo {isOnline ? "En línea" : "Sin conexión"}
+      <footer className="px-4 py-6 border-t border-slate-200 bg-white mt-12 text-center">
+        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+          Flotaya · Soberanía Hídrica · Modo {isOnline ? "En línea" : "Offline"}
         </p>
       </footer>
     </div>

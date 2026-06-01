@@ -1,31 +1,37 @@
-@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 
+
 /* =============================================
-   LYMPHA — Design System Tokens
+   LYMPHA — Scientific Design System
    Tech-Organic · Cenote Water Intelligence
    ============================================= */
 :root {
-  /* Core Palette */
-  --lympha-walnut:    #14100E;  /* Deep Walnut Brown — nav, buttons */
-  --lympha-amber:     #C9A227;  /* Gold Amber — primary accent, eyebrows */
-  --lympha-sand:      #EAE4D8;  /* Linen — main background */
-  --lympha-cream:     #FFFFFF;  /* White — cards, panels */
-  --lympha-slate:     #0F172A;  /* Slate Black — body text, titles */
-  --lympha-iot:       #0EA5E9;  /* Sky Blue IoT — sync indicators */
-
-  /* Semáforo Térreo */
-  --lympha-green:     #4A7C59;  /* Moss Green — good status */
-  --lympha-mustard:   #C9A227;  /* Mustard — warning */
-  --lympha-terracota: #A34A3E;  /* Brick Terracota — alert */
+  /* Core Palette (Scientific Slate & Tech Blue) */
+  --lympha-bg:          #f8f9fa;  /* Clean Slate Off-White bg */
+  --lympha-surface:     #ffffff;  /* Pure White for clean borders/dividers */
+  --lympha-ink:        #1e293b;  /* Slate 800 - high contrast dark text */
+  --lympha-muted:      #64748b;  /* Slate 500 - secondary text */
+  
+  --lympha-accent:     #0f52ba;  /* Tech Cobalt Blue — main actions/indicators */
+  --lympha-accent-light: #eff6ff; /* Cobalt Light background */
+  
+  /* Semáforo NOM */
+  --lympha-green:     #166534;  /* Deep Forest Green (good status text) */
+  --lympha-green-bg:  #f0fdf4;  /* Forest Green light bg */
+  
+  --lympha-yellow:    #854d0e;  /* Amber Yellow (warning text) */
+  --lympha-yellow-bg: #fefce8;  /* Amber Yellow light bg */
+  
+  --lympha-red:       #991b1b;  /* Crimson Red (alert text) */
+  --lympha-red-bg:    #fef2f2;  /* Crimson Red light bg */
 
   /* Typography */
-  --font-serif: 'Instrument Serif', Georgia, serif;
-  --font-sans:  'Inter', system-ui, sans-serif;
+  --font-sans:  'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-mono:  'JetBrains Mono', monospace;
 
   /* Layout */
-  --background: var(--lympha-sand);
-  --foreground: var(--lympha-slate);
+  --background: var(--lympha-bg);
+  --foreground: var(--lympha-ink);
 }
 
 * {
@@ -37,21 +43,20 @@ html, body {
 }
 
 body {
-  background-color: var(--lympha-sand);
-  color: var(--lympha-slate);
+  background-color: var(--lympha-bg);
+  color: var(--lympha-ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Utility: Instrument Serif en cursiva para títulos premium */
-.serif-italic {
-  font-family: var(--font-serif);
-  font-style: italic;
+/* Custom Utilities */
+.font-mono {
+  font-family: var(--font-mono);
 }
 
 /* ---- Scrollbar sutil ---- */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: var(--lympha-sand); }
-::-webkit-scrollbar-thumb { background: #C9A22760; border-radius: 99px; }
-::-webkit-scrollbar-thumb:hover { background: var(--lympha-amber); }
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--lympha-bg); }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }

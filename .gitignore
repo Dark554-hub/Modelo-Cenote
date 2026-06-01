@@ -44,4 +44,7 @@ tsconfig.tsbuildinfo
 
 # ─── Carpetas legacy / no necesarias en el repo ──────────────
 dashboard/
-data/historical_data.csv
+.gemini/
+.claude/
+.cursor/
+.agents/
