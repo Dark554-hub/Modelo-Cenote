@@ -40,4 +40,8 @@ node_modules/
 .vercel/
 .env*.local
 *.log
+tsconfig.tsbuildinfo
 
+# ─── Carpetas legacy / no necesarias en el repo ──────────────
+dashboard/
+data/
