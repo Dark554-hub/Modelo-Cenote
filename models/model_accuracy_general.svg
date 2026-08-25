@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="560" viewBox="0 0 920 560" role="img" aria-label="Accuracy general del modelo de riesgo de contaminacion">
+  <rect width="100%" height="100%" fill="#f7faf9"/>
+  <text x="82" y="42" font-family="Arial, sans-serif" font-size="30" font-weight="700" fill="#12212b">Accuracy general del modelo</text>
+  <text x="82" y="68" font-family="Arial, sans-serif" font-size="15" fill="#5d6b75">Clasificador de probabilidad de contaminacion a 5 dias. Promedio de metricas: 0.780</text>
+
+  <g font-family="Arial, sans-serif">
+    
+      <line x1="82" y1="468" x2="866" y2="468" stroke="#d5dde3" stroke-width="1"/>
+      <text x="68" y="473" text-anchor="end" font-size="15" fill="#4c5963">0.0</text>
+      <line x1="82" y1="392.8" x2="866" y2="392.8" stroke="#d5dde3" stroke-width="1"/>
+      <text x="68" y="397.8" text-anchor="end" font-size="15" fill="#4c5963">0.2</text>
+      <line x1="82" y1="317.6" x2="866" y2="317.6" stroke="#d5dde3" stroke-width="1"/>
+      <text x="68" y="322.6" text-anchor="end" font-size="15" fill="#4c5963">0.4</text>
+      <line x1="82" y1="242.4" x2="866" y2="242.4" stroke="#d5dde3" stroke-width="1"/>
+      <text x="68" y="247.4" text-anchor="end" font-size="15" fill="#4c5963">0.6</text>
+      <line x1="82" y1="167.2" x2="866" y2="167.2" stroke="#d5dde3" stroke-width="1"/>
+      <text x="68" y="172.2" text-anchor="end" font-size="15" fill="#4c5963">0.8</text>
+      <line x1="82" y1="92" x2="866" y2="92" stroke="#d5dde3" stroke-width="1"/>
+      <text x="68" y="97" text-anchor="end" font-size="15" fill="#4c5963">1.0</text>
+    <line x1="82" y1="92" x2="82" y2="468" stroke="#34424d" stroke-width="1.5"/>
+    <line x1="82" y1="468" x2="866" y2="468" stroke="#34424d" stroke-width="1.5"/>
+    <line x1="82" y1="174.71999999999997" x2="866" y2="174.71999999999997" stroke="#26343d" stroke-width="2" stroke-dasharray="8 7"/>
+    <text x="858" y="166.71999999999997" text-anchor="end" font-size="14" font-weight="700" fill="#26343d">Promedio 0.780</text>
+    
+      <rect x="82" y="176.1488" width="129.6" height="291.8512" rx="6" fill="#0f8b8d"/>
+      <text x="146.8" y="164.1488" text-anchor="middle" font-size="17" font-weight="700" fill="#0f8b8d">0.776</text>
+      <text x="146.8" y="502" text-anchor="middle" font-size="16" fill="#34424d">Accuracy</text>
+      <rect x="245.6" y="221.156" width="129.6" height="246.844" rx="6" fill="#0f8b8d"/>
+      <text x="310.4" y="209.156" text-anchor="middle" font-size="17" font-weight="700" fill="#0f8b8d">0.656</text>
+      <text x="310.4" y="502" text-anchor="middle" font-size="16" fill="#34424d">Precision</text>
+      <rect x="409.2" y="139.8648" width="129.6" height="328.1352" rx="6" fill="#d45d00"/>
+      <text x="474" y="127.8648" text-anchor="middle" font-size="17" font-weight="700" fill="#d45d00">0.873</text>
+      <text x="474" y="502" text-anchor="middle" font-size="16" fill="#34424d">Recall</text>
+      <rect x="572.8" y="186.2632" width="129.6" height="281.7368" rx="6" fill="#0f8b8d"/>
+      <text x="637.5999999999999" y="174.2632" text-anchor="middle" font-size="17" font-weight="700" fill="#0f8b8d">0.749</text>
+      <text x="637.5999999999999" y="502" text-anchor="middle" font-size="16" fill="#34424d">F1-score</text>
+      <rect x="736.4" y="150.16719999999998" width="129.6" height="317.8328" rx="6" fill="#4f6d7a"/>
+      <text x="801.1999999999999" y="138.16719999999998" text-anchor="middle" font-size="17" font-weight="700" fill="#4f6d7a">0.845</text>
+      <text x="801.1999999999999" y="502" text-anchor="middle" font-size="16" fill="#34424d">ROC AUC</text>
+    <text x="28" y="280" transform="rotate(-90 28 280)" text-anchor="middle" font-size="16" font-weight="700" fill="#34424d">Puntaje</text>
+    <text x="474" y="536" text-anchor="middle" font-size="16" font-weight="700" fill="#34424d">Metricas generales del clasificador</text>
+  </g>
+</svg>

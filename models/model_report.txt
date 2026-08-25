@@ -1,24 +1,52 @@
-CENOTE MONITOR — REPORTE DE FORECASTING (T+1 a T+5 días)
-============================================================
+CENOTE MONITOR - REPORTE DE RIESGO GENERAL DE CONTAMINACION
+====================================================================
 
-Features usados: ph, turbidez_ntu, conductividad_us, temperatura_c, humedad_pct
-Muestras train : 3360
+Objetivo del modelo:
+  Predecir la probabilidad de contaminacion en los proximos 5 dias si no se actua.
+
+Definicion de riesgo preventivo:
+  pH real futuro fuera de 7.2-7.6 en T+1 a T+5
+  o turbidez real futura mayor a 3.2 NTU en T+1 a T+5
+
+Validacion:
+  Split temporal: 70% entrenamiento, 10% validacion de umbral, 20% prueba final.
+  No se usan targets futuros ni proyecciones del target como features.
+  Umbral operativo fijo: 0.50 para balancear precision y accuracy.
+
+Features usados: ph, turbidez_ntu, conductividad_us, temperatura_c, humedad_pct, ph_desvio_74, turbidez_humedad, temperatura_humedad, conductividad_temperatura, hora_sin, hora_cos, ciclo_30d_sin, ciclo_30d_cos
+Muestras train : 2940
+Muestras valid : 420
 Muestras test  : 840
+Tasa positiva  : 38.24%
 
-  target_ph_T1      : MAE=0.0322  R²=0.8847
-  target_ph_T2      : MAE=0.0422  R²=0.7936
-  target_ph_T3      : MAE=0.0533  R²=0.6940
-  target_ph_T4      : MAE=0.0632  R²=0.5804
-  target_ph_T5      : MAE=0.0731  R²=0.4675
-  target_turb_T1    : MAE=0.3908  R²=0.1439
-  target_turb_T2    : MAE=0.4074  R²=0.0440
-  target_turb_T3    : MAE=0.3948  R²=0.0493
-  target_turb_T4    : MAE=0.4126  R²=0.0167
-  target_turb_T5    : MAE=0.4072  R²=0.0680
+METRICAS GENERALES:
+  Accuracy : 0.7762
+  Precision: 0.6565
+  Recall   : 0.8727
+  F1-score : 0.7493
+  ROC AUC  : 0.8453
+  Umbral decision: 0.50
+
+MATRIZ DE CONFUSION:
+  Filas = real, columnas = predicho
+  [[371,147],[41,281]]
+
+UMBRALES DE RIESGO:
+  bajo  : probabilidad < 40%
+  medio : probabilidad entre 40% y 69%
+  alto  : probabilidad >= 70%
 
 IMPORTANCIA DE VARIABLES:
-  ph                  : 0.2560
-  turbidez_ntu        : 0.2255
-  temperatura_c       : 0.1967
-  humedad_pct         : 0.1679
-  conductividad_us    : 0.1540
+  ph_desvio_74        : 0.1596
+  hora_sin            : 0.1544
+  ciclo_30d_sin       : 0.1456
+  temperatura_humedad : 0.1434
+  hora_cos            : 0.1417
+  humedad_pct         : 0.0693
+  conductividad_temperatura: 0.0626
+  conductividad_us    : 0.0385
+  ciclo_30d_cos       : 0.0237
+  turbidez_ntu        : 0.0208
+  ph                  : 0.0174
+  turbidez_humedad    : 0.0123
+  temperatura_c       : 0.0107

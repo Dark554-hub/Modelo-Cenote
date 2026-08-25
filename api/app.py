@@ -25,6 +25,7 @@ from pydantic import BaseModel
 BASE_DIR    = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODEL_PATH  = os.path.join(BASE_DIR, 'models', 'water_quality_model.pkl')
 SCALER_PATH = os.path.join(BASE_DIR, 'models', 'scaler.pkl')
+JSON_MODEL_PATH = os.path.join(BASE_DIR, 'models', 'contamination_risk_model.json')
 
 SUPABASE_URL = "https://lbhlinueuscwwivazeyn.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxiaGxpbnVldXNjd3dpdmF6ZXluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAxOTA4MzYsImV4cCI6MjA5NTc2NjgzNn0.L9Y2lo_2tI-Nby-ZRGLFVkofJkdbGXIFKUL_qmuMD2w"
@@ -40,12 +41,17 @@ retrain_lock = threading.Lock()
 
 def load_assets():
     global model, scaler
-    if os.path.exists(MODEL_PATH) and os.path.exists(SCALER_PATH):
+    if os.path.exists(JSON_MODEL_PATH):
+        with open(JSON_MODEL_PATH, "r", encoding="utf-8") as f:
+            model = json.load(f)
+        scaler = None
+        print("[OK] Modelo JSON de riesgo cargado.")
+    elif os.path.exists(MODEL_PATH) and os.path.exists(SCALER_PATH):
         model  = joblib.load(MODEL_PATH)
         scaler = joblib.load(SCALER_PATH)
-        print("[OK] Modelo cargado.")
+        print("[OK] Modelo PKL cargado.")
     else:
-        print("[WARN] Modelo no encontrado. Ejecuta train_model.py primero.")
+        print("[WARN] Modelo no encontrado. Ejecuta train_model.py o train_model.mjs primero.")
 
 load_assets()
 
@@ -95,35 +101,133 @@ def calculate_derived_metrics(ph: float, turbidez: float, temp: float, conductiv
 
     return {"salud_pct": salud, "riesgo_algas_pct": riesgo_algas, "bandera": bandera}
 
-def predict_future_5d(reading: Dict[str, Any]) -> Dict[str, Any]:
-    if model is None or scaler is None:
+def _risk_level(probability: float) -> str:
+    if probability >= 70:
+        return "alto"
+    if probability >= 40:
+        return "medio"
+    return "bajo"
+
+def _risk_recommendations(level: str, probability: float) -> list:
+    if level == "alto":
+        return [
+            f"Riesgo alto ({probability:.1f}%). Actuar antes de que el deterioro se consolide.",
+            "Restringir temporalmente actividades que puedan agregar contaminantes.",
+            "Tomar muestra de laboratorio y aumentar frecuencia de monitoreo.",
+        ]
+    if level == "medio":
+        return [
+            f"Riesgo medio ({probability:.1f}%). Conviene intervenir preventivamente.",
+            "Revisar fuentes cercanas de escorrentia, visitantes, sedimentos o descargas.",
+            "Repetir medicion y monitorear tendencia durante las proximas 24-48 h.",
+        ]
+    return [
+        f"Riesgo bajo ({probability:.1f}%). Mantener monitoreo normal.",
+        "No se detecta urgencia, pero conviene conservar el registro historico.",
+    ]
+
+def _json_model_features(reading: Dict[str, Any]) -> list:
+    now = datetime.now()
+    hour = now.hour
+    day = now.timetuple().tm_yday
+    ph = reading['ph']
+    turbidez = reading['turbidez_ntu']
+    conductividad = reading['conductividad_us']
+    temperatura = reading['temperatura_c']
+    humedad = reading['humedad_pct']
+
+    return [
+        ph,
+        turbidez,
+        conductividad,
+        temperatura,
+        humedad,
+        abs(ph - 7.4),
+        turbidez * humedad,
+        temperatura * humedad,
+        conductividad * temperatura,
+        np.sin((2 * np.pi * hour) / 24),
+        np.cos((2 * np.pi * hour) / 24),
+        np.sin((2 * np.pi * day) / 30),
+        np.cos((2 * np.pi * day) / 30),
+    ]
+
+def predict_contamination_risk(reading: Dict[str, Any]) -> Dict[str, Any]:
+    if model is None:
         raise HTTPException(status_code=503, detail="Modelo no cargado.")
 
-    X = np.array([[
+    base_features = [
         reading['ph'],
         reading['turbidez_ntu'],
         reading['conductividad_us'],
         reading['temperatura_c'],
         reading['humedad_pct'],
-    ]])
-    pred    = model.predict(scaler.transform(X))[0]
-    ph_5d   = [round(float(p), 2) for p in pred[0:5]]
-    turb_5d = [round(float(t), 2) for t in pred[5:10]]
+    ]
 
-    peor_turbidez  = max(turb_5d)
-    peor_ph_desvio = max(abs(p - 7.4) for p in ph_5d)
-    peor_ph        = next(p for p in ph_5d if abs(p - 7.4) == peor_ph_desvio)
+    if isinstance(model, dict) and model.get("model_type") in ("contamination_risk_logistic", "contamination_risk_forest"):
+        features = _json_model_features(reading)
+        means = model["scaler"]["means"]
+        stds = model["scaler"]["stds"]
+        scaled_features = [(value - mean) / std for value, mean, std in zip(features, means, stds)]
 
-    metricas = calculate_derived_metrics(
-        peor_ph, peor_turbidez,
-        reading['temperatura_c'],
-        reading['conductividad_us']
-    )
+        if model.get("model_type") == "contamination_risk_forest":
+            def predict_tree(node: Dict[str, Any]) -> float:
+                if "probability" in node:
+                    return float(node["probability"])
+                feature_index = int(node["feature"])
+                branch = "left" if scaled_features[feature_index] <= float(node["threshold"]) else "right"
+                return predict_tree(node[branch])
+
+            probability_raw = float(np.mean([predict_tree(tree) for tree in model["trees"]]))
+        else:
+            weights = model["weights"]
+            bias = model["bias"]
+            z = bias
+            for value, weight in zip(scaled_features, weights):
+                z += value * weight
+            probability_raw = 1 / (1 + np.exp(-z))
+
+        probability = round(float(probability_raw) * 100, 1)
+        decision_threshold = float(model.get("decision_threshold", 0.5)) * 100
+        contaminated = probability >= decision_threshold
+        level = _risk_level(probability)
+
+        return {
+            "probabilidad_contaminacion_pct": probability,
+            "riesgo": level,
+            "contaminacion_probable": contaminated,
+            "horizonte": "proximos 5 dias si no se actua",
+            "recomendaciones": _risk_recommendations(level, probability),
+        }
+
+    if scaler is None:
+        raise HTTPException(status_code=503, detail="Scaler no cargado para modelo PKL.")
+
+    pkl_features = _json_model_features(reading) if getattr(model, "n_features_in_", 5) == 13 else base_features
+    X = np.array([pkl_features])
+    X_sc = scaler.transform(X)
+
+    if hasattr(model, "predict_proba"):
+        probability = round(float(model.predict_proba(X_sc)[0][1]) * 100, 1)
+        contaminated = bool(model.predict(X_sc)[0])
+    else:
+        # Compatibilidad temporal con el modelo anterior de regresion.
+        pred = model.predict(X_sc)[0]
+        ph_5d = [float(p) for p in pred[0:5]]
+        turb_5d = [float(t) for t in pred[5:10]]
+        bad_ph = any(p < 6.5 or p > 8.0 for p in ph_5d)
+        bad_turb = any(t > 4.0 for t in turb_5d)
+        contaminated = bad_ph or bad_turb
+        probability = 85.0 if contaminated else 15.0
+
+    level = _risk_level(probability)
 
     return {
-        'ph_pred':           ph_5d,
-        'turbidez_pred':     turb_5d,
-        'metricas_peor_dia': metricas
+        "probabilidad_contaminacion_pct": probability,
+        "riesgo": level,
+        "contaminacion_probable": contaminated,
+        "horizonte": "proximos 5 dias si no se actua",
+        "recomendaciones": _risk_recommendations(level, probability),
     }
 
 # ─── Reentrenamiento automático ───────────────────────────────────────────────
@@ -169,11 +273,16 @@ def health():
 def nueva_lectura(req: LecturaRequest, background_tasks: BackgroundTasks):
     """
     Recibe lectura del sensor desde Vercel, corre el modelo ML,
-    guarda sensores + predicciones en Supabase y dispara reentrenamiento si aplica.
+    guarda sensores + riesgo general en Supabase y dispara reentrenamiento si aplica.
     """
     reading = req.dict()
-    pred    = predict_future_5d(reading)
-    m       = pred['metricas_peor_dia']
+    risk = predict_contamination_risk(reading)
+    m = calculate_derived_metrics(
+        reading['ph'],
+        reading['turbidez_ntu'],
+        reading['temperatura_c'],
+        reading['conductividad_us'],
+    )
 
     fila = {
         "ph":               reading['ph'],
@@ -181,26 +290,31 @@ def nueva_lectura(req: LecturaRequest, background_tasks: BackgroundTasks):
         "conductividad_us": reading['conductividad_us'],
         "temperatura_c":    reading['temperatura_c'],
         "humedad_pct":      reading['humedad_pct'],
-        "pred_ph_d1":   pred['ph_pred'][0],
-        "pred_ph_d2":   pred['ph_pred'][1],
-        "pred_ph_d3":   pred['ph_pred'][2],
-        "pred_ph_d4":   pred['ph_pred'][3],
-        "pred_ph_d5":   pred['ph_pred'][4],
-        "pred_turb_d1": pred['turbidez_pred'][0],
-        "pred_turb_d2": pred['turbidez_pred'][1],
-        "pred_turb_d3": pred['turbidez_pred'][2],
-        "pred_turb_d4": pred['turbidez_pred'][3],
-        "pred_turb_d5": pred['turbidez_pred'][4],
+        "prob_contaminacion_pct": risk['probabilidad_contaminacion_pct'],
+        "riesgo_contaminacion": risk['riesgo'],
+        "contaminacion_probable": risk['contaminacion_probable'],
         "salud_pct": m['salud_pct'],
         "bandera":   m['bandera'],
     }
 
     guardado = supabase_insert(fila)
+    if not guardado:
+        fila_basica = {
+            "ph":               reading['ph'],
+            "turbidez_ntu":     reading['turbidez_ntu'],
+            "conductividad_us": reading['conductividad_us'],
+            "temperatura_c":    reading['temperatura_c'],
+            "humedad_pct":      reading['humedad_pct'],
+            "salud_pct":        m['salud_pct'],
+            "bandera":          m['bandera'],
+        }
+        guardado = supabase_insert(fila_basica)
+
     if guardado:
         background_tasks.add_task(maybe_retrain)
 
     return {
         "guardado":      guardado,
-        "pronostico_5d": pred,
-        "diagnostico":   m
+        "riesgo_contaminacion": risk,
+        "diagnostico_actual":   m
     }
