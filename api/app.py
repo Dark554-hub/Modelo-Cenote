@@ -27,8 +27,8 @@ MODEL_PATH  = os.path.join(BASE_DIR, 'models', 'water_quality_model.pkl')
 SCALER_PATH = os.path.join(BASE_DIR, 'models', 'scaler.pkl')
 JSON_MODEL_PATH = os.path.join(BASE_DIR, 'models', 'contamination_risk_model.json')
 
-SUPABASE_URL = "https://lbhlinueuscwwivazeyn.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxiaGxpbnVldXNjd3dpdmF6ZXluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAxOTA4MzYsImV4cCI6MjA5NTc2NjgzNn0.L9Y2lo_2tI-Nby-ZRGLFVkofJkdbGXIFKUL_qmuMD2w"
+SUPABASE_URL = "https://dyaryhtlkzqtgmowwdqz.supabase.co"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5YXJ5aHRsa3pxdGdtb3d3ZHF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE4NTA1MzUsImV4cCI6MjEwNzQyNjUzNX0.Yrm_nT1kRht59kFbVGHPqfCFUfQDEDos0kKUmJoYXNM"
 TABLA        = "FLOTAYA"
 
 RETRAIN_EVERY = 100

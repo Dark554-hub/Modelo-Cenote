@@ -3,8 +3,8 @@ import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
-const SUPABASE_URL = 'https://lbhlinueuscwwivazeyn.supabase.co';
-const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxiaGxpbnVldXNjd3dpdmF6ZXluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAxOTA4MzYsImV4cCI6MjA5NTc2NjgzNn0.L9Y2lo_2tI-Nby-ZRGLFVkofJkdbGXIFKUL_qmuMD2w';
+const SUPABASE_URL = 'https://dyaryhtlkzqtgmowwdqz.supabase.co';
+const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5YXJ5aHRsa3pxdGdtb3d3ZHF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE4NTA1MzUsImV4cCI6MjEwNzQyNjUzNX0.Yrm_nT1kRht59kFbVGHPqfCFUfQDEDos0kKUmJoYXNM';
 
 function headers() {
   return {
