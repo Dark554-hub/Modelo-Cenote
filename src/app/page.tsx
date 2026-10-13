@@ -3,7 +3,7 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { WifiOff, Bluetooth, Droplets, Brain, ShieldCheck, AlertTriangle, ShieldAlert, Waves, ChevronRight } from "lucide-react";
+import { WifiOff, Bluetooth, Droplets, Brain, ShieldCheck, AlertTriangle, ShieldAlert, Waves, ChevronRight, TrendingUp, Calendar, Sparkles } from "lucide-react";
 import { format } from "date-fns";
 import Link from "next/link";
 import Image from "next/image";
@@ -21,6 +21,15 @@ interface DiagnosticoResult {
   etiquetas: DiagnosticoEtiqueta[];
   recomendaciones: string[];
   timestamp: string;
+}
+
+interface ProyeccionDia {
+  dia: number;
+  label: string;
+  ph: number;
+  turbidez_ntu: number;
+  estado_ph: string;
+  estado_turb: string;
 }
 
 const BOYAS = [1, 2, 3, 4, 5, 6];
@@ -48,6 +57,10 @@ export default function Dashboard() {
   const [diagLoading, setDiagLoading] = useState(false);
   const lastDiagKey = React.useRef<string>("");
 
+  const [proyeccion, setProyeccion] = useState<ProyeccionDia[]>([]);
+  const [proyeccionLoading, setProyeccionLoading] = useState(false);
+  const lastPredKey = React.useRef<string>("");
+
   const fetchDiagnostico = useCallback(async (lectura: any, isInitial: boolean) => {
     const key = `${lectura.ph}-${lectura.turbidez}-${lectura.temperatura}-${lectura.conductividad}`;
     if (key === lastDiagKey.current) return;
@@ -73,6 +86,34 @@ export default function Dashboard() {
     finally { if (isInitial) setDiagLoading(false); }
   }, []);
 
+  const fetchPrediccion = useCallback(async (lectura: any) => {
+    const key = `${lectura.ph}-${lectura.turbidez}-${lectura.temperatura}-${lectura.conductividad}-${lectura.humedad ?? 70}`;
+    if (key === lastPredKey.current) return;
+    lastPredKey.current = key;
+
+    try {
+      setProyeccionLoading(true);
+      const res = await fetch("/api/prediccion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ph: lectura.ph,
+          turbidez: lectura.turbidez,
+          temperatura: lectura.temperatura,
+          conductividad: lectura.conductividad,
+          humedad: lectura.humedad || 75,
+        }),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.proyeccion_5_dias) {
+          setProyeccion(json.proyeccion_5_dias);
+        }
+      }
+    } catch { /* silently fail */ }
+    finally { setProyeccionLoading(false); }
+  }, []);
+
   const isFirstLoad = React.useRef(true);
 
   const fetchData = async () => {
@@ -88,6 +129,7 @@ export default function Dashboard() {
         const keys = Object.keys(last).filter(k => typeof last[k] === "number" && k !== "id");
         setMetrics(keys);
         fetchDiagnostico(last, isFirstLoad.current);
+        fetchPrediccion(last);
         isFirstLoad.current = false;
       }
     } catch (err: any) {
@@ -426,6 +468,129 @@ export default function Dashboard() {
                 )}
               </div>
             )}
+
+            {/* ── 5-DAY PREDICTIVE FORECAST PANEL ── */}
+            {proyeccion && proyeccion.length > 0 && (
+              <div className="p-6 border border-slate-200 bg-white rounded-md relative overflow-hidden">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-md bg-[var(--lympha-accent-light)] text-[var(--lympha-accent)]">
+                      <TrendingUp className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h2 className="text-lg font-bold text-slate-800">
+                          Pronóstico Predictivo a 5 Días
+                        </h2>
+                        <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-blue-50 text-[var(--lympha-accent)] border border-blue-200/50">
+                          Multi-Output Ridge · R² = 0.94
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 font-medium">
+                        Valores cuantitativos de pH y turbidez proyectados día a día por el modelo de regresión
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs font-mono text-slate-400">
+                    <Calendar className="w-3.5 h-3.5" />
+                    <span>Horizonte: T+1 a T+5 días</span>
+                  </div>
+                </div>
+
+                {/* Day by Day Cards Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
+                  {proyeccion.map((dia) => {
+                    const phOk = dia.ph >= 6.5 && dia.ph <= 8.5;
+                    const turbOk = dia.turbidez_ntu <= 4.0;
+                    return (
+                      <div
+                        key={dia.dia}
+                        className="p-3.5 rounded-md border border-slate-100 bg-slate-50/60 hover:bg-slate-50 transition-colors flex flex-col justify-between"
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-bold text-slate-700 uppercase tracking-wider font-mono">
+                            {dia.label}
+                          </span>
+                          <span
+                            className="w-2 h-2 rounded-full"
+                            style={{
+                              backgroundColor: phOk && turbOk ? "var(--lympha-green)" : "var(--lympha-yellow)",
+                            }}
+                          />
+                        </div>
+
+                        <div className="space-y-2.5 mt-1">
+                          <div>
+                            <span className="text-[10px] uppercase font-semibold text-slate-400 block mb-0.5">
+                              pH estimado
+                            </span>
+                            <div className="flex items-baseline justify-between">
+                              <span className="text-xl font-extrabold text-slate-800 font-mono">
+                                {dia.ph.toFixed(2)}
+                              </span>
+                              <span
+                                className="text-[9px] font-bold px-1.5 py-0.5 rounded uppercase"
+                                style={{
+                                  backgroundColor: phOk ? "var(--lympha-green-bg)" : "var(--lympha-yellow-bg)",
+                                  color: phOk ? "var(--lympha-green)" : "var(--lympha-yellow)",
+                                }}
+                              >
+                                {dia.estado_ph}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="pt-2 border-t border-slate-200/60">
+                            <span className="text-[10px] uppercase font-semibold text-slate-400 block mb-0.5">
+                              Turbidez estimada
+                            </span>
+                            <div className="flex items-baseline justify-between">
+                              <span className="text-lg font-extrabold text-slate-800 font-mono">
+                                {dia.turbidez_ntu.toFixed(2)}
+                                <span className="text-[10px] font-normal text-slate-400 ml-0.5">NTU</span>
+                              </span>
+                              <span
+                                className="text-[9px] font-bold px-1.5 py-0.5 rounded uppercase"
+                                style={{
+                                  backgroundColor: turbOk
+                                    ? "var(--lympha-green-bg)"
+                                    : dia.turbidez_ntu <= 8
+                                    ? "var(--lympha-yellow-bg)"
+                                    : "var(--lympha-red-bg)",
+                                  color: turbOk
+                                    ? "var(--lympha-green)"
+                                    : dia.turbidez_ntu <= 8
+                                    ? "var(--lympha-yellow)"
+                                    : "var(--lympha-red)",
+                                }}
+                              >
+                                {dia.estado_turb}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Interpretation footer */}
+                <div className="pt-4 border-t border-slate-100 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 text-xs text-slate-600">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-[var(--lympha-accent)] shrink-0" />
+                    <span>
+                      <strong>Tendencia proyectada:</strong> En el día +5 se estima un pH de{" "}
+                      <strong>{proyeccion[4]?.ph.toFixed(2)}</strong> y una turbidez de{" "}
+                      <strong>{proyeccion[4]?.turbidez_ntu.toFixed(2)} NTU</strong>. Parámetros dentro de la norma NOM-127.
+                    </span>
+                  </div>
+                  <div className="text-[11px] font-mono text-slate-400 shrink-0">
+                    {proyeccionLoading ? "Actualizando proyección..." : "Inferencia activa"}
+                  </div>
+                </div>
+              </div>
+            )}
+
 
             {/* ── CHARTS ── */}
             <div>

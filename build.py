@@ -32,10 +32,14 @@ def run(script_path, description):
 if __name__ == "__main__":
     run(
         os.path.join(BASE, "data", "generate_synthetic_data.py"),
-        "Paso 1/2 — Generando datos sinteticos de entrenamiento"
+        "Paso 1/3 — Generando datos sinteticos de entrenamiento"
     )
     run(
         os.path.join(BASE, "models", "train_model.py"),
-        "Paso 2/2 — Entrenando modelo RandomForest (5 features, 10 outputs)"
+        "Paso 2/3 — Entrenando modelo de clasificacion de riesgo"
+    )
+    run(
+        os.path.join(BASE, "models", "train_forecast.py"),
+        "Paso 3/3 — Entrenando modelo de pronostico a 5 dias (pH y Turbidez)"
     )
     print("\n[BUILD COMPLETO] API lista para arrancar.\n")

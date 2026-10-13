@@ -27,6 +27,8 @@ MODEL_PATH  = os.path.join(BASE_DIR, 'models', 'water_quality_model.pkl')
 SCALER_PATH = os.path.join(BASE_DIR, 'models', 'scaler.pkl')
 JSON_MODEL_PATH = os.path.join(BASE_DIR, 'models', 'contamination_risk_model.json')
 
+FORECAST_MODEL_PATH = os.path.join(BASE_DIR, 'models', 'forecast_model.json')
+
 SUPABASE_URL = "https://dyaryhtlkzqtgmowwdqz.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5YXJ5aHRsa3pxdGdtb3d3ZHF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE4NTA1MzUsImV4cCI6MjEwNzQyNjUzNX0.Yrm_nT1kRht59kFbVGHPqfCFUfQDEDos0kKUmJoYXNM"
 TABLA        = "FLOTAYA"
@@ -36,11 +38,12 @@ RETRAIN_EVERY = 100
 # ─── Estado global ────────────────────────────────────────────────────────────
 model  = None
 scaler = None
+forecast_model = None
 nuevas_lecturas_desde_retrain = 0
 retrain_lock = threading.Lock()
 
 def load_assets():
-    global model, scaler
+    global model, scaler, forecast_model
     if os.path.exists(JSON_MODEL_PATH):
         with open(JSON_MODEL_PATH, "r", encoding="utf-8") as f:
             model = json.load(f)
@@ -51,7 +54,17 @@ def load_assets():
         scaler = joblib.load(SCALER_PATH)
         print("[OK] Modelo PKL cargado.")
     else:
-        print("[WARN] Modelo no encontrado. Ejecuta train_model.py o train_model.mjs primero.")
+        print("[WARN] Modelo de riesgo no encontrado. Ejecuta train_model.py primero.")
+
+    if os.path.exists(FORECAST_MODEL_PATH):
+        try:
+            with open(FORECAST_MODEL_PATH, "r", encoding="utf-8") as f:
+                forecast_model = json.load(f)
+            print("[OK] Modelo de pronóstico a 5 días cargado.")
+        except Exception as e:
+            print(f"[WARN] Error cargando forecast_model.json: {e}")
+    else:
+        print("[WARN] forecast_model.json no encontrado.")
 
 load_assets()
 
@@ -230,17 +243,73 @@ def predict_contamination_risk(reading: Dict[str, Any]) -> Dict[str, Any]:
         "recomendaciones": _risk_recommendations(level, probability),
     }
 
+def predict_forecast(reading: Dict[str, Any]) -> list:
+    """
+    Predice los valores futuros exactos de pH y turbidez (T+1 a T+5 días).
+    Si el modelo JSON está disponible usa la regresión entrenada; si no, aplica proyección física.
+    """
+    if forecast_model is None:
+        ph = float(reading.get("ph", 7.4))
+        turb = float(reading.get("turbidez_ntu", 1.5))
+        return [
+            {
+                "dia": i + 1,
+                "label": f"+{i + 1} día{'s' if i > 0 else ''}",
+                "ph": round(ph + (i + 1) * (-0.015 if ph > 7.5 else 0.01), 2),
+                "turbidez_ntu": round(max(0.1, turb + (i + 1) * 0.12), 2),
+                "estado_ph": "Óptimo (NOM)" if 6.5 <= ph <= 8.5 else "Fuera de norma",
+                "estado_turb": "Óptimo (NOM)" if turb <= 4.0 else ("Alerta" if turb <= 8.0 else "Crítico"),
+            }
+            for i in range(5)
+        ]
+
+    features = _json_model_features(reading)
+    means = forecast_model["scaler"]["means"]
+    stds = forecast_model["scaler"]["stds"]
+    scaled_features = [(v - m) / (s if s != 0 else 1.0) for v, m, s in zip(features, means, stds)]
+
+    weights = forecast_model["weights"]
+    biases = forecast_model["biases"]
+
+    ph_preds = []
+    for i in range(5):
+        val = biases[i] + sum(w * x for w, x in zip(weights[i], scaled_features))
+        val = round(float(np.clip(val, 5.0, 9.5)), 2)
+        ph_preds.append(val)
+
+    turb_preds = []
+    for i in range(5, 10):
+        val = biases[i] + sum(w * x for w, x in zip(weights[i], scaled_features))
+        val = round(float(max(0.1, val)), 2)
+        turb_preds.append(val)
+
+    proyeccion = []
+    for i in range(5):
+        p_val = ph_preds[i]
+        t_val = turb_preds[i]
+        proyeccion.append({
+            "dia": i + 1,
+            "label": f"+{i + 1} día{'s' if i > 0 else ''}",
+            "ph": p_val,
+            "turbidez_ntu": t_val,
+            "estado_ph": "Óptimo (NOM)" if 6.5 <= p_val <= 8.5 else "Fuera de norma",
+            "estado_turb": "Óptimo (NOM)" if t_val <= 4.0 else ("Alerta" if t_val <= 8.0 else "Crítico"),
+        })
+    return proyeccion
+
 # ─── Reentrenamiento automático ───────────────────────────────────────────────
 def _retrain_background():
-    global model, scaler
+    global model, scaler, forecast_model
     print("[Retrain] Iniciando reentrenamiento con datos de Supabase...")
     train_script = os.path.join(BASE_DIR, 'models', 'train_model.py')
-    result = subprocess.run([sys.executable, train_script], capture_output=True, text=True)
-    if result.returncode == 0:
+    forecast_script = os.path.join(BASE_DIR, 'models', 'train_forecast.py')
+    r1 = subprocess.run([sys.executable, train_script], capture_output=True, text=True)
+    r2 = subprocess.run([sys.executable, forecast_script], capture_output=True, text=True)
+    if r1.returncode == 0 and r2.returncode == 0:
         load_assets()
-        print("[Retrain] Modelo actualizado exitosamente.")
+        print("[Retrain] Modelos de riesgo y pronóstico actualizados exitosamente.")
     else:
-        print(f"[Retrain ERROR] {result.stderr}")
+        print(f"[Retrain ERROR] Riesgo: {r1.stderr} | Pronóstico: {r2.stderr}")
 
 def maybe_retrain():
     global nuevas_lecturas_desde_retrain
@@ -264,9 +333,25 @@ class LecturaRequest(BaseModel):
 def health():
     return {
         "status": "ok",
-        "modelo_cargado": model is not None,
+        "modelo_riesgo_cargado": model is not None,
+        "modelo_pronostico_cargado": forecast_model is not None,
         "lecturas_hasta_retrain": RETRAIN_EVERY - nuevas_lecturas_desde_retrain,
         "timestamp": datetime.now().isoformat()
+    }
+
+@app.post("/prediccion")
+def prediccion(req: LecturaRequest):
+    """
+    Pronostica valores numéricos futuros de pH y turbidez para los próximos 5 días.
+    """
+    reading = req.dict()
+    proyeccion = predict_forecast(reading)
+    risk = predict_contamination_risk(reading) if model is not None else None
+    return {
+        "status": "ok",
+        "lectura_actual": reading,
+        "proyeccion_5_dias": proyeccion,
+        "riesgo_general": risk,
     }
 
 @app.post("/nueva-lectura")
@@ -277,6 +362,7 @@ def nueva_lectura(req: LecturaRequest, background_tasks: BackgroundTasks):
     """
     reading = req.dict()
     risk = predict_contamination_risk(reading)
+    proyeccion = predict_forecast(reading)
     m = calculate_derived_metrics(
         reading['ph'],
         reading['turbidez_ntu'],
@@ -314,7 +400,8 @@ def nueva_lectura(req: LecturaRequest, background_tasks: BackgroundTasks):
         background_tasks.add_task(maybe_retrain)
 
     return {
-        "guardado":      guardado,
+        "guardado":             guardado,
         "riesgo_contaminacion": risk,
-        "diagnostico_actual":   m
+        "diagnostico_actual":   m,
+        "proyeccion_5_dias":     proyeccion,
     }

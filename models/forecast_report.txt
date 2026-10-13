@@ -1,0 +1,37 @@
+CENOTE MONITOR - MODELO PREDICTIVO DE VALORES FUTUROS
+============================================================
+
+Objetivo: Predecir valores numericos de pH y turbidez para T+1 a T+5 dias.
+Features: ph, turbidez_ntu, conductividad_us, temperatura_c, humedad_pct, ph_desvio_74, turbidez_humedad, temperatura_humedad, conductividad_temperatura, hora_sin, hora_cos, ciclo_30d_sin, ciclo_30d_cos
+Muestras train: 2940 | valid: 420 | test: 840
+
+METRICAS POR TARGET (en test set):
+------------------------------------------------------------
+Target                    MAE       R²
+------------------------------------------------------------
+  target_ph_T1           0.0229   0.9476
+  target_ph_T2           0.0230   0.9448
+  target_ph_T3           0.0232   0.9421
+  target_ph_T4           0.0237   0.9402
+  target_ph_T5           0.0234   0.9393
+  target_turb_T1         0.3515   0.0825
+  target_turb_T2         0.3302   0.1537
+  target_turb_T3         0.3197   0.1900
+  target_turb_T4         0.3211   0.1422
+  target_turb_T5         0.3280   0.1238
+
+COMPARACION CON RANDOM FOREST (referencia, no exportado):
+------------------------------------------------------------
+  target_ph_T1           0.0276   0.9243
+  target_ph_T2           0.0284   0.9185
+  target_ph_T3           0.0282   0.9145
+  target_ph_T4           0.0286   0.9054
+  target_ph_T5           0.0293   0.9027
+  target_turb_T1         0.4317  -0.3543
+  target_turb_T2         0.4324  -0.3870
+  target_turb_T3         0.3933  -0.2451
+  target_turb_T4         0.3885  -0.2676
+  target_turb_T5         0.4210  -0.4598
+
+[OK] Modelo exportado a: C:\Users\Emili\OneDrive\Desktop\modelo Cenote\models\forecast_model.json
+[OK] Tamaño: 5.4 KB
