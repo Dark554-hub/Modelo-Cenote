@@ -45,19 +45,19 @@ function clasificarLectura(input: DiagnosticoInput): DiagnosticoResult {
   // ── pH ──
   const { ph, turbidez, temperatura, conductividad } = input;
 
-  if (ph >= 6.5 && ph <= 8.0) {
+  if (ph >= 6.5 && ph <= 8.5) {
     etiquetas.push({
       parametro: 'pH',
       estado: 'óptimo',
       severidad: 0,
-      detalle: `pH ${ph.toFixed(2)} dentro del rango saludable (6.5–8.0).`,
+      detalle: `pH ${ph.toFixed(2)} dentro del rango permisible NOM-127 (6.5–8.5).`,
     });
   } else if (ph < 6.5) {
     etiquetas.push({
       parametro: 'pH',
       estado: 'ácido',
       severidad: 2,
-      detalle: `pH ${ph.toFixed(2)} por debajo del mínimo (6.5). Agua ácida que puede dañar la biodiversidad acuática.`,
+      detalle: `pH ${ph.toFixed(2)} ácido, por debajo del mínimo permisible NOM-127 (6.5). Puede alterar el ecosistema acuático.`,
     });
     severidadMax = Math.max(severidadMax, 2);
   } else {
@@ -65,7 +65,7 @@ function clasificarLectura(input: DiagnosticoInput): DiagnosticoResult {
       parametro: 'pH',
       estado: 'alcalino',
       severidad: 2,
-      detalle: `pH ${ph.toFixed(2)} por encima del máximo (8.0). Posible contaminación por productos químicos o cosméticos.`,
+      detalle: `pH ${ph.toFixed(2)} alcalino, por encima del límite máximo permisible NOM-127 (8.5). Posible presencia de contaminantes químicos o cosméticos.`,
     });
     severidadMax = Math.max(severidadMax, 2);
   }
@@ -116,27 +116,27 @@ function clasificarLectura(input: DiagnosticoInput): DiagnosticoResult {
 
   // ── Conductividad (si disponible) ──
   if (conductividad !== undefined && conductividad !== null) {
-    if (conductividad >= 200 && conductividad <= 600) {
+    if (conductividad >= 200 && conductividad <= 1000) {
       etiquetas.push({
         parametro: 'Conductividad',
         estado: 'normal',
         severidad: 0,
-        detalle: `Conductividad ${conductividad.toFixed(1)} µS/cm en rango saludable (200–600).`,
+        detalle: `Conductividad ${conductividad.toFixed(1)} µS/cm dentro del rango óptimo para cenotes (200–1000 µS/cm).`,
       });
-    } else if (conductividad < 150) {
+    } else if (conductividad < 200) {
       etiquetas.push({
         parametro: 'Conductividad',
         estado: 'baja',
         severidad: 1,
-        detalle: `Conductividad ${conductividad.toFixed(1)} µS/cm baja (< 150). Agua poco mineralizada.`,
+        detalle: `Conductividad ${conductividad.toFixed(1)} µS/cm baja (< 200 µS/cm). Agua muy poco mineralizada.`,
       });
       severidadMax = Math.max(severidadMax, 1);
-    } else if (conductividad <= 1000) {
+    } else if (conductividad <= 1500) {
       etiquetas.push({
         parametro: 'Conductividad',
         estado: 'elevada',
         severidad: 1,
-        detalle: `Conductividad ${conductividad.toFixed(1)} µS/cm elevada. Posible infiltración de aguas residuales o agrícolas.`,
+        detalle: `Conductividad ${conductividad.toFixed(1)} µS/cm elevada (1000–1500 µS/cm). Posible infiltración de aguas o arrastre de minerales.`,
       });
       severidadMax = Math.max(severidadMax, 1);
     } else {
@@ -144,7 +144,7 @@ function clasificarLectura(input: DiagnosticoInput): DiagnosticoResult {
         parametro: 'Conductividad',
         estado: 'alerta',
         severidad: 2,
-        detalle: `Conductividad ${conductividad.toFixed(1)} µS/cm crítica (> 1000). Alta concentración de sales disueltas. Acción inmediata requerida.`,
+        detalle: `Conductividad ${conductividad.toFixed(1)} µS/cm crítica (> 1500 µS/cm). Alta salinidad o intrusión marina.`,
       });
       severidadMax = Math.max(severidadMax, 2);
     }
@@ -195,13 +195,13 @@ function clasificarLectura(input: DiagnosticoInput): DiagnosticoResult {
   // Recomendaciones específicas por parámetro
   const phEtiqueta = etiquetas.find((e) => e.parametro === 'pH');
   if (phEtiqueta && phEtiqueta.severidad >= 2) {
-    if (ph > 8.0) {
+    if (ph > 8.5) {
       recomendaciones.push(
-        `pH alcalino (${ph}): Causa probable → uso de bloqueadores solares y cosméticos por visitantes. Considerar restricción temporal de acceso.`
+        `pH alcalino (${ph}): Por encima del límite NOM-127 (8.5). Causa probable: bloqueadores solares o productos cosméticos de visitantes. Considerar regulación de acceso.`
       );
     } else {
       recomendaciones.push(
-        `pH ácido (${ph}): Causa probable → lluvia ácida, descargas industriales o agrícolas. Investigar fuentes de contaminación aguas arriba.`
+        `pH ácido (${ph}): Por debajo del límite NOM-127 (6.5). Causa probable: escorrentías orgánicas o lluvia ácida. Investigar fuentes de aportación.`
       );
     }
   }
@@ -293,10 +293,10 @@ export async function GET() {
       features: ['ph', 'turbidez', 'temperatura', 'conductividad'],
       clases: ['normal', 'advertencia', 'alerta'],
       umbrales: {
-        pH: { normal: '6.5–8.0', alerta: '< 6.5 o > 8.0' },
+        pH: { normal: '6.5–8.5', alerta: '< 6.5 o > 8.5' },
         turbidez: { normal: '≤ 4 NTU', advertencia: '4–8 NTU', alerta: '> 8 NTU' },
         temperatura: { normal: '≤ 26.5 °C', advertencia: '> 26.5 °C' },
-        conductividad: { normal: '200–600 µS/cm', advertencia: '< 150 o 600–1000', alerta: '> 1000 µS/cm' },
+        conductividad: { normal: '200–1000 µS/cm', advertencia: '< 200 o 1000–1500', alerta: '> 1500 µS/cm' },
       },
       referencia: 'NOM-127-SSA1-2021',
       entrenamiento: {

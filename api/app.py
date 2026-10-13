@@ -98,18 +98,26 @@ def supabase_insert(row: dict) -> bool:
 
 # ─── ML helpers ───────────────────────────────────────────────────────────────
 def calculate_derived_metrics(ph: float, turbidez: float, temp: float, conductividad: float) -> Dict[str, Any]:
-    ph_penalty   = min(abs(ph - 7.4) * 15, 60)
+    # NOM-127-SSA1-2021: pH permisible 6.5 a 8.5 (rango neutro óptimo 7.2 - 7.8)
+    if 6.5 <= ph <= 8.5:
+        ph_penalty = min(abs(ph - 7.5) * 6, 20)
+    elif ph < 6.5:
+        ph_penalty = min(20 + (6.5 - ph) * 30, 60)
+    else:
+        ph_penalty = min(20 + (ph - 8.5) * 30, 60)
+
+    # NOM-127: Turbidez óptima <= 4.0 NTU
     turb_penalty = min(turbidez * 4, 40)
     salud = round(max(0, 100 - (ph_penalty + turb_penalty)), 1)
 
-    riesgo_algas = (temp - 25) * 8
-    if turbidez < 2.0:      riesgo_algas += 15
-    if ph > 8.0:            riesgo_algas += 10
-    if conductividad > 650: riesgo_algas += 10
+    riesgo_algas = max(0.0, (temp - 25) * 8)
+    if turbidez < 2.0:       riesgo_algas += 15
+    if ph > 8.5:             riesgo_algas += 10
+    if conductividad > 1000: riesgo_algas += 10
     riesgo_algas = round(max(0, min(100, riesgo_algas)), 1)
 
-    if salud >= 75 and turbidez < 4.0:   bandera = "Verde (Excelente)"
-    elif salud >= 45 and turbidez < 8.0: bandera = "Amarilla (Precaucion)"
+    if salud >= 75 and turbidez <= 4.0:  bandera = "Verde (Excelente)"
+    elif salud >= 45 and turbidez <= 8.0: bandera = "Amarilla (Precaucion)"
     else:                                bandera = "Roja (No Nadar)"
 
     return {"salud_pct": salud, "riesgo_algas_pct": riesgo_algas, "bandera": bandera}
@@ -228,7 +236,7 @@ def predict_contamination_risk(reading: Dict[str, Any]) -> Dict[str, Any]:
         pred = model.predict(X_sc)[0]
         ph_5d = [float(p) for p in pred[0:5]]
         turb_5d = [float(t) for t in pred[5:10]]
-        bad_ph = any(p < 6.5 or p > 8.0 for p in ph_5d)
+        bad_ph = any(p < 6.5 or p > 8.5 for p in ph_5d)
         bad_turb = any(t > 4.0 for t in turb_5d)
         contaminated = bad_ph or bad_turb
         probability = 85.0 if contaminated else 15.0

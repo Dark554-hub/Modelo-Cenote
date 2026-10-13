@@ -152,26 +152,36 @@ export default function Dashboard() {
   const chartColors = ["var(--lympha-accent)", "#166534", "#0ea5e9", "#991b1b", "#8b5cf6"];
 
   const metricLabel: Record<string, { label: string; unit: string }> = {
-    ph:          { label: "pH",           unit: "" },
-    turbidez:    { label: "Turbidez",     unit: " NTU" },
-    temperatura: { label: "Temperatura",  unit: " °C" },
-    nitratos:    { label: "Nitratos",     unit: " mg/L" },
-    conductividad: { label: "Conductividad", unit: " µS/cm" },
+    ph:            { label: "pH",             unit: "" },
+    turbidez:      { label: "Turbidez",       unit: " NTU" },
+    temperatura:   { label: "Temperatura",    unit: " °C" },
+    conductividad: { label: "Conductividad",  unit: " µS/cm" },
+    humedad:       { label: "Humedad",        unit: " %" },
+    nitratos:      { label: "Nitratos",       unit: " mg/L" },
   };
 
   const getStatus = (key: string, val: number) => {
     if (key === "ph") {
-      if (val >= 6.5 && val <= 8.0) return { label: "Óptimo",        color: "var(--lympha-green)" };
-      return                                { label: "Fuera de rango", color: "var(--lympha-red)" };
+      if (val >= 6.5 && val <= 8.5) return { label: "Óptimo (NOM)",    color: "var(--lympha-green)" };
+      return                                { label: "Fuera de norma",  color: "var(--lympha-red)" };
     }
     if (key === "turbidez") {
-      if (val <= 4) return { label: "Agua clara", color: "var(--lympha-green)" };
-      if (val <= 8) return { label: "Moderada",   color: "var(--lympha-yellow)" };
-      return               { label: "Turbia",     color: "var(--lympha-red)" };
+      if (val <= 4.0) return { label: "Óptima (NOM)",     color: "var(--lympha-green)" };
+      if (val <= 8.0) return { label: "Moderada",         color: "var(--lympha-yellow)" };
+      return                 { label: "Turbia (Alerta)",  color: "var(--lympha-red)" };
     }
     if (key === "temperatura") {
-      if (val <= 26.5) return { label: "Normal",  color: "var(--lympha-green)" };
-      return                  { label: "Elevada", color: "var(--lympha-yellow)" };
+      if (val <= 26.5) return { label: "Normal (NOM)",    color: "var(--lympha-green)" };
+      return                  { label: "Elevada",         color: "var(--lympha-yellow)" };
+    }
+    if (key === "conductividad") {
+      if (val >= 200 && val <= 1000) return { label: "Óptima (NOM)",    color: "var(--lympha-green)" };
+      if (val <= 1500)               return { label: "Elevada",         color: "var(--lympha-yellow)" };
+      return                                { label: "Alerta salina",   color: "var(--lympha-red)" };
+    }
+    if (key === "humedad") {
+      if (val >= 60 && val <= 90) return { label: "Normal", color: "var(--lympha-green)" };
+      return                             { label: "Atípica", color: "var(--lympha-yellow)" };
     }
     return { label: "—", color: "var(--lympha-muted)" };
   };
